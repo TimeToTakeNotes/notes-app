@@ -1,20 +1,13 @@
 import express from "express";
 import cors from "cors";
-import { PrismaClient } from "@prisma/client";
+import noteRoutes from "./routes/noteRoutes"; // Import routes
 
 const app = express();
-const prisma = new PrismaClient();
 
-app.use(express.json())
-app.use(cors())
+app.use(express.json());
+app.use(cors());
 
-app.get("/api/notes", async (req, res) => {
-    const notes = await prisma.note.findMany();
+app.use("/api/notes", noteRoutes); // Use the route
 
-    res.json(notes);
-});
-
-
-app.listen(5000, () => {
-    console.log("server running on localhost:5000")
-});
+const PORT = 5000;
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
