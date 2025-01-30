@@ -47,7 +47,7 @@ export const updateNote = async (req: Request, res: Response) => {
             where: { id },
             data: { title, content },
         });
-        res.status(200).json(updateNote);
+        res.status(200).json(updatedNote);
     } catch (error) {
         res.status(500).json({ error: "Failed to update note" });
     }

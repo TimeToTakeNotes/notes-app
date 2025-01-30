@@ -73,55 +73,61 @@ const App = () => {
 
   const handleUpdateNote = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    if (!selectedNote){
-      return
-    }
-
-    try {
-      const response = await fetch(`http://localhost:5000/api/notes/${selectedNote.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            title,
-            content,
-          })
-        }
-      );
-
-      const updatedNote = await response.json();
-      
-      const updatedNotesList = notes.map((note) => 
-        note.id === selectedNote.id
-          ? updatedNote
-          : note
-      );
   
+    if (!selectedNote) {
+      return;
+    }
+  
+    try {
+      const response = await fetch(`http://localhost:5000/api/notes/${selectedNote.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          content,
+        }),
+      });
+  
+      const updatedNote = await response.json();
+
+      const updatedNotesList = notes.map((note) =>
+        note.id === selectedNote.id ? updatedNote : note
+      );
+
       setNotes(updatedNotesList);
       setTitle("");
       setContent("");
       setSelectedNote(null);
     } catch (e) {
       console.log(e);
-    }SpR@chen$ieDEUTsch160
+    }
   };
 
   const handleCancel = () => {
     setTitle("")
     setContent("")
     setSelectedNote(null);
-  }
+  };
 
-  const deleteNote = (event: React.MouseEvent, noteId: number) => {
+  const deleteNote = async (event: React.MouseEvent, noteId: number) => {
     event.stopPropagation();
 
-    const updatedNotes = notes.filter((note) => note.id != noteId);
+    try {
+      await fetch(`http://localhost:5000/api/notes/${noteId}`, 
+        {
+          method: "DELETE",
+        }
+      );
 
-    setNotes(updatedNotes);
-  }
+      const updatedNotes = notes.filter((note) => note.id !== noteId);
+
+      setNotes(updatedNotes);
+    } catch (e) {
+      console.log(e);
+    }
+  };
 
   return(<div className="app-container">
     <form className="note-form" 
@@ -175,6 +181,6 @@ const App = () => {
     </div>
 
   </div>)
-}
+};
 
 export default App;

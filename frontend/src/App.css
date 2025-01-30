@@ -54,6 +54,7 @@ h2{
 
 textarea,
 input{
+  resize: none;
   border-radius: 5px;
   border: 1px solid black;
   padding: 10px;
