@@ -1,11 +1,11 @@
 import { Router } from "express";
-import prisma from "../db"; // Use the Prisma Client instance
+import { getNotes, createNote, updateNote, deleteNote } from "../controllers/noteController";
 
 const router = Router();
 
-router.get("/", async (req, res) => {
-    const notes = await prisma.note.findMany();
-    res.json(notes);
-});
+router.get("/", getNotes);
+router.post("/", createNote);
+router.put("/:id", updateNote);
+router.delete("/:id", deleteNote);
 
 export default router;
