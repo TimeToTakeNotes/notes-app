@@ -1,6 +1,13 @@
 import React, {useEffect, useState} from 'react';
-import "./App.css";
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMicrophone } from '@fortawesome/free-solid-svg-icons';
 
+import "./App.css";
+import { constants } from 'buffer';
+
+// Add the FontAwesom icons to the library
+library.add(faMicrophone);
 
 type Note = {
   id: number;
@@ -16,6 +23,9 @@ const App = () => {
   const [content, setContent] = useState("");
 
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+
+  const [ isRecording, setIsRecording ] = useState(false);
+  const [ mediaRecorder, setMediaRecorder ] = useState<MediaRecorder | null>(null);
 
 
   useEffect(() => {
@@ -129,6 +139,46 @@ const App = () => {
     }
   };
 
+
+  const startRecording = async () => {
+    setIsRecording(true);
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+
+    recorder.ondataavailable = async (event) => {
+      const audioBlob = event.data;
+
+      // Send audio blob to backed for transciption
+      const formData = new FormData();
+      formData.append("audio", audioBlob);
+
+      try {
+        const response = await fetch("http://localhost:5000/api/speech-to-text", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+        setContent((prevContent) => prevContent + " " + data.transciption);
+
+      } catch (e) {
+        console.log("Error transcribing audio", e);
+      }
+    };
+
+    recorder.start();
+    setMediaRecorder(recorder);
+  };
+
+  const stopRecording = () => {
+    setIsRecording(false);
+    mediaRecorder?.stop();
+  };
+
+
+
+
   return(<div className="app-container">
     <form className="note-form" 
       onSubmit={(event) => 
@@ -143,17 +193,23 @@ const App = () => {
         }
         placeholder="Title"
         required>
-
       </input>
-      <textarea
-        value={content}
-        onChange={(event) =>
-          setContent(event.target.value)
-        }
-        placeholder="Content" 
-        rows={10} 
-        required>
-      </textarea>
+
+      <div className="textarea-container">
+        <textarea
+          value={content}
+          onChange={(event) =>
+            setContent(event.target.value)
+          }
+          placeholder="Content" 
+          rows={10} 
+          required>
+        </textarea>
+        <button className='mic-button' type='button' onClick={isRecording ? stopRecording : startRecording}>
+          <FontAwesomeIcon icon={faMicrophone}/>
+        </button>
+      </div>
+
       {selectedNote ? (
         <div className='edit-buttons'>
           <button type='submit'>Save</button>

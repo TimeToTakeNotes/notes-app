@@ -61,6 +61,36 @@ input{
   font-size: 16px;
 }
 
+.textarea-container {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.textarea-container textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.textarea-container .mic-button {
+  background-color: transparent;
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+ }
+ 
+ form .mic-button .fa-microphone {
+   font-size: 18px;
+   color: #000;
+ }
+
 .note-form button{
   border-radius: 5px;
   background-color: rgb(64, 154, 184);
