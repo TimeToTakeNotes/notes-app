@@ -91,6 +91,20 @@ input{
    color: #000;
  }
 
+ .textarea-container .transcription-feedback {
+  position: absolute;
+  bottom: 80px;
+  right: 55px;
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #000;
+ }
+
 .note-form button{
   border-radius: 5px;
   background-color: rgb(64, 154, 184);

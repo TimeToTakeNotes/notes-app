@@ -27,6 +27,8 @@ const App = () => {
   const [ isRecording, setIsRecording ] = useState(false);
   const [ mediaRecorder, setMediaRecorder ] = useState<MediaRecorder | null>(null);
 
+  const [transcription, setTranscription] = useState<string | null>(null);
+
 
   useEffect(() => {
     const fetchNotes = async () => {
@@ -142,28 +144,40 @@ const App = () => {
 
   const startRecording = async () => {
     setIsRecording(true);
-
+    setTranscription("Recording..."); // Show "Processing..." feedback
+  
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const recorder = new MediaRecorder(stream);
-
+  
     recorder.ondataavailable = async (event) => {
       const audioBlob = event.data;
-
-      // Send audio blob to backed for transciption
+    
       const formData = new FormData();
       formData.append("audio", audioBlob);
-
+    
       try {
         const response = await fetch("http://localhost:5000/api/speech-to-text", {
           method: "POST",
           body: formData,
         });
-
+    
         const data = await response.json();
-        setContent((prevContent) => prevContent + " " + data.transciption);
-
+    
+        // Ensure only the clean transcription is appended
+        const transcriptionResult = data.transcription || ""; // Extract transcription
+        const cleanTranscription = transcriptionResult.replace(/^Transcription result:\s*/, ""); // Remove prefix
+    
+        setContent((prevContent) => {
+          // Check if transcription is already included, if not, append it
+          return prevContent.includes(cleanTranscription)
+            ? prevContent
+            : prevContent.trim() + " " + cleanTranscription;
+        });
+    
+        setTranscription(null); // Clear "Processing..." feedback
       } catch (e) {
         console.log("Error transcribing audio", e);
+        setTranscription("Error during transcription"); // Show error message
       }
     };
 
@@ -172,19 +186,18 @@ const App = () => {
   };
 
   const stopRecording = () => {
+    setTranscription("Processing...");
     setIsRecording(false);
     mediaRecorder?.stop();
+    setMediaRecorder(null);
   };
-
 
 
 
   return(<div className="app-container">
     <form className="note-form" 
       onSubmit={(event) => 
-        selectedNote 
-          ? handleUpdateNote(event)
-          : handleAddNote(event)}>
+        selectedNote ? handleUpdateNote(event) : handleAddNote(event)}>
             
       <input 
         value={title}
@@ -208,7 +221,12 @@ const App = () => {
         <button className='mic-button' type='button' onClick={isRecording ? stopRecording : startRecording}>
           <FontAwesomeIcon icon={faMicrophone}/>
         </button>
+
+        {transcription && <p className='transcription-feedback'>{transcription}</p>}
+
       </div>
+
+      
 
       {selectedNote ? (
         <div className='edit-buttons'>

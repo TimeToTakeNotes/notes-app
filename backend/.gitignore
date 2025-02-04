@@ -1,4 +1,11 @@
 node_modules
 # Keep environment variables out of version control
 .env
+
+# Python
 venv/
+__pucache__/
+*.pyc
+
+# Multer uploads
+uploads/

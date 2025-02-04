@@ -1,11 +1,11 @@
 import { spawn } from "child_process";
 import path from "path";
 
-// Use __dirname to get the absolute path of the current file and resolve the script path accordingly
+
 export const transcribeAudio = (audioFilePath: string): Promise<string> => {
   return new Promise((resolve, reject) => {
-    const pythonProcess = spawn("python", [
-      path.resolve("../src/scripts/python_scripts/whisper_script.py"), // Adjust the path to your Whisper Python script
+    const pythonProcess = spawn(path.resolve("venv/Scripts/python.exe"), [
+      path.resolve("src/scripts/python_scripts/whisper_script.py"),
       audioFilePath,
     ]);
 
@@ -22,12 +22,17 @@ export const transcribeAudio = (audioFilePath: string): Promise<string> => {
 
     pythonProcess.on("close", (code) => {
       if (code === 0) {
-        console.log("Transcription result: ", transcription.trim()); // Log the transcription result
-        resolve(transcription.trim());
+        // Remove any unwanted text that may be part of the transcription result
+        transcription = transcription.trim().replace(/^Transcription result:\s*/, ""); // Clean up unwanted prefix
+        
+        console.log("Final Transcription:", transcription); // Log the cleaned transcription
+        resolve(transcription); // Send the cleaned transcription result
       } else {
+        console.error("Whisper error output:", errorOutput);
         reject(errorOutput || "Unknown error occurred during transcription.");
       }
     });
   });
 };
+
 
