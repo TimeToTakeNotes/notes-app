@@ -11,8 +11,6 @@ try:
     # Transcribe the audio
     result = model.transcribe(audio_file)
 
-    print("Transcription result:", result["text"])  # Add this line for debugging
-
     # Print the transcription (this will be sent to Node.js)
     print(result["text"])
 except Exception as e:

@@ -23,9 +23,8 @@ export const transcribeAudio = (audioFilePath: string): Promise<string> => {
     pythonProcess.on("close", (code) => {
       if (code === 0) {
         // Remove any unwanted text that may be part of the transcription result
-        transcription = transcription.trim().replace(/^Transcription result:\s*/, ""); // Clean up unwanted prefix
+        transcription = transcription.trim();
         
-        console.log("Final Transcription:", transcription); // Log the cleaned transcription
         resolve(transcription); // Send the cleaned transcription result
       } else {
         console.error("Whisper error output:", errorOutput);
