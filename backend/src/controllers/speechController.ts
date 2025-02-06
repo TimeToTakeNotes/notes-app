@@ -65,8 +65,6 @@ export const uploadAudio = async (req: Request, res: Response, next: NextFunctio
     // Clean up uploaded file
     fs.unlinkSync(updatedFilePath);
 
-    console.log("Transcription:", transcription);
-
     // Send clean transcription result to frontend
     res.json({ transcription });
   } catch (error) {

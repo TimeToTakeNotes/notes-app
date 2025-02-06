@@ -144,44 +144,36 @@ const App = () => {
 
   const startRecording = async () => {
     setIsRecording(true);
-    setTranscription("Recording..."); // Show "Processing..." feedback
+    setTranscription("Recording...");
   
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const recorder = new MediaRecorder(stream);
   
     recorder.ondataavailable = async (event) => {
       const audioBlob = event.data;
-    
+  
       const formData = new FormData();
       formData.append("audio", audioBlob);
-    
+  
       try {
+        // Send each audio chunk to the backend for transcription
         const response = await fetch("http://localhost:5000/api/speech-to-text", {
           method: "POST",
           body: formData,
         });
-    
+  
         const data = await response.json();
-    
-        // Ensure only the clean transcription is appended
-        const transcriptionResult = data.transcription || ""; // Extract transcription
-        const cleanTranscription = transcriptionResult.replace(/^Transcription result:\s*/, ""); // Remove prefix
-    
-        setContent((prevContent) => {
-          // Check if transcription is already included, if not, append it
-          return prevContent.includes(cleanTranscription)
-            ? prevContent
-            : prevContent.trim() + " " + cleanTranscription;
-        });
-    
-        setTranscription(null); // Clear "Processing..." feedback
+        const transcriptionResult = data.transcription || "";
+  
+        // Append transcription result to the content in real-time
+        setContent((prevContent) => prevContent + " " + transcriptionResult);
       } catch (e) {
         console.log("Error transcribing audio", e);
-        setTranscription("Error during transcription"); // Show error message
+        setTranscription("Error during transcription");
       }
     };
-
-    recorder.start();
+  
+    recorder.start(1000); // Record in 1-second chunks
     setMediaRecorder(recorder);
   };
 

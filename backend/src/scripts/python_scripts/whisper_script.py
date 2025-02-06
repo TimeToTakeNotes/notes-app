@@ -1,20 +1,19 @@
 import sys
 import whisper
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning)
 
 # Load Whisper model
 model = whisper.load_model("base")
 
-# Get the audio file path from the command-line arguments
-audio_file = sys.argv[1]
+def transcribe_audio(file_path):
+    # Transcribe the given audio file
+    result = model.transcribe(file_path)
+    print(result["text"])  # Send transcription result to stdout
 
-try:
-    # Transcribe the audio
-    result = model.transcribe(audio_file)
-
-    # Print the transcription (this will be sent to Node.js)
-    print(result["text"])
-except Exception as e:
-    print(f"Error during transcription: {str(e)}")
-    sys.exit(1)
+if __name__ == "__main__":
+    audio_file = sys.argv[1]
+    transcribe_audio(audio_file)
 
 
