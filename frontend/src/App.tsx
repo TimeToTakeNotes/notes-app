@@ -29,6 +29,8 @@ const App = () => {
 
   const [transcription, setTranscription] = useState<string | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState("");
+
 
   useEffect(() => {
     const fetchNotes = async () => {
@@ -167,13 +169,15 @@ const App = () => {
   
         // Append transcription result to the content in real-time
         setContent((prevContent) => prevContent + " " + transcriptionResult);
+
+        setTranscription(null);
       } catch (e) {
         console.log("Error transcribing audio", e);
         setTranscription("Error during transcription");
       }
     };
   
-    recorder.start(1000); // Record in 1-second chunks
+    recorder.start();
     setMediaRecorder(recorder);
   };
 
@@ -210,7 +214,9 @@ const App = () => {
           rows={10} 
           required>
         </textarea>
-        <button className='mic-button' type='button' onClick={isRecording ? stopRecording : startRecording}>
+        <button className='mic-button' type='button' 
+          onClick={isRecording ? stopRecording : startRecording}
+          title={isRecording ? 'Stop recording' : 'Start voice input'}>
           <FontAwesomeIcon icon={faMicrophone}/>
         </button>
 
@@ -241,7 +247,7 @@ const App = () => {
           </button>
         </div>
         <h2>{note.title}</h2>
-        <p>{note.content}</p>
+        <p className='note-content'>{note.content}</p>
       </div>
       ))}
     </div>
