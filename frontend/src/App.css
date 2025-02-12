@@ -11,6 +11,23 @@ body{
   max-width: 1200px;
 }
 
+.search-bar {
+  width: auto;
+  padding: 5px;
+  margin-bottom: 5px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
+}
+
+.highlight {
+  background-color: yellow;
+  color: black;
+  font-weight: bold;
+}
+
+
 .notes-grid{
   display: grid;
   grid-template-columns: repeat(

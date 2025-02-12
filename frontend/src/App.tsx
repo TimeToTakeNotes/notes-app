@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrophone } from '@fortawesome/free-solid-svg-icons';
 
 import "./App.css";
-import { constants } from 'buffer';
+import { text } from 'stream/consumers';
 
 // Add the FontAwesom icons to the library
 library.add(faMicrophone);
@@ -31,6 +31,9 @@ const App = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
 
+  useEffect(() => {
+    document.title = "Notes App";
+  }, []);
 
   useEffect(() => {
     const fetchNotes = async () => {
@@ -188,12 +191,39 @@ const App = () => {
     setMediaRecorder(null);
   };
 
+  const filteredNotes = notes.filter(
+    (note) => 
+      note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      note.content.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const highlightText = (text: string, query: string) => {
+    if (!query) return text;
+    const regex = new RegExp(`(${query})`, "gi");
+    const parts = text.split(regex);
+    return parts.map((part, index) => 
+      part.toLowerCase() === query.toLowerCase() ? (
+        <span key={index} className="highlight">{part}</span>
+      ) : (
+        part
+      )
+    );
+  };
+
 
 
   return(<div className="app-container">
     <form className="note-form" 
       onSubmit={(event) => 
         selectedNote ? handleUpdateNote(event) : handleAddNote(event)}>
+
+      <input 
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search notes..."
+        className="search-bar">
+      </input>
             
       <input 
         value={title}
@@ -237,7 +267,7 @@ const App = () => {
     </form>
 
     <div className="notes-grid">
-      {notes.map((note) => (
+      {filteredNotes.map((note) => (
         <div className="note-item"
           onClick={() => handleNoteClick(note)}>
         <div className="notes-header">
@@ -246,8 +276,12 @@ const App = () => {
             x
           </button>
         </div>
-        <h2>{note.title}</h2>
-        <p className='note-content'>{note.content}</p>
+        <h2>
+          {highlightText(note.title, searchQuery)}
+        </h2>
+        <p className='note-content'>
+          {highlightText(note.content, searchQuery)}
+        </p>
       </div>
       ))}
     </div>
