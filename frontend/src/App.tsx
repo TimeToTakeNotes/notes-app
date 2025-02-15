@@ -2,17 +2,27 @@ import React, {useEffect, useState} from 'react';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrophone } from '@fortawesome/free-solid-svg-icons';
-
 import "./App.css";
-import { text } from 'stream/consumers';
+
 
 // Add the FontAwesom icons to the library
 library.add(faMicrophone);
 
+
+// Type for response structure from backend
+type NoteResponse = {
+  id: number;
+  title: string;
+  content: string;
+  tags: { tag: { name: string } }[];
+};
+
+// Type for use by notes in frontend
 type Note = {
   id: number;
   title: string;
-  content: string
+  content: string;
+  tags: string[];  // Adjusted to be just strings
 };
 
 
@@ -31,32 +41,45 @@ const App = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+
+
   useEffect(() => {
     document.title = "Notes App";
   }, []);
+
 
   useEffect(() => {
     const fetchNotes = async () => {
       try {
         const response = await fetch("http://localhost:5000/api/notes");
-
-        const notes: Note[] = await response.json();
-
-        setNotes(notes);
+        const notesData: NoteResponse[] = await response.json();
+        
+        // Map the backend structure to the frontend structure
+        const formattedNotes: Note[] = notesData.map(note => ({
+          id: note.id,
+          title: note.title,
+          content: note.content,
+          tags: note.tags.map(tagObj => tagObj.tag.name)  // Extract tag names
+        }));
+        
+        setNotes(formattedNotes);
       } catch (e) {
         console.log(e);
       }
     };
-
+  
     fetchNotes();
   }, []);
 
 
-  const handleNoteClick = (note:Note) => {
+  const handleNoteClick = (note: Note) => {
     setSelectedNote(note);
     setTitle(note.title);
     setContent(note.content);
-  }
+    setTags(note.tags);  // Load tags correctly
+  };
 
 
   const handleAddNote = async (event: React.FormEvent) => {
@@ -73,6 +96,7 @@ const App = () => {
           body: JSON.stringify({
             title,
             content,
+            tags,
           })
         }
       );
@@ -82,6 +106,7 @@ const App = () => {
       setNotes([newNote, ...notes]);
       setTitle("");
       setContent("");
+      setTags([]);
     } catch (e) {
       console.log(e);
     }
@@ -104,6 +129,7 @@ const App = () => {
         body: JSON.stringify({
           title,
           content,
+          tags,
         }),
       });
   
@@ -116,6 +142,7 @@ const App = () => {
       setNotes(updatedNotesList);
       setTitle("");
       setContent("");
+      setTags([]);
       setSelectedNote(null);
     } catch (e) {
       console.log(e);
@@ -125,6 +152,7 @@ const App = () => {
   const handleCancel = () => {
     setTitle("")
     setContent("")
+    setTags([]);
     setSelectedNote(null);
   };
 
@@ -210,6 +238,28 @@ const App = () => {
     );
   };
 
+  const addTag = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      
+      const trimmedTag = tagInput.trim();
+      
+      // Check for tag length and tag limit
+      if (trimmedTag.length > 0 && trimmedTag.length <= 50 && tags.length < 3) {
+        setTags([...tags, trimmedTag]);
+        setTagInput("");
+      } else if (tags.length >= 3) {
+        alert("Maximum of 3 tags allowed.");
+      } else if (trimmedTag.length > 50) {
+        alert("Tag length cannot exceed 50 characters.");
+      }
+    }
+  };
+
+  const removeTag = (indexToRemove: number) => {
+    setTags(tags.filter((_, index) => index !== indexToRemove));
+  };
+
 
 
   return(<div className="app-container">
@@ -251,10 +301,31 @@ const App = () => {
         </button>
 
         {transcription && <p className='transcription-feedback'>{transcription}</p>}
-
       </div>
 
-      
+
+      <div className="tags-container">
+        {tags.map((tag, index) => (
+          <span key={index} className="tag">
+            {tag} 
+            <button 
+              type="button" 
+              className="remove-tag-btn"
+              onClick={() => removeTag(index)}
+            >
+              &times;
+            </button>
+          </span>
+        ))}
+      </div>
+      <input 
+        type="text"
+        placeholder={tags.length < 3 ? "Add a tag..." : "Max 3 tags"}
+        value={tagInput}
+        onChange={(e) => setTagInput(e.target.value)}
+        onKeyDown={addTag}
+        disabled={tags.length >= 3}
+        className='tags-input'/>
 
       {selectedNote ? (
         <div className='edit-buttons'>
@@ -265,24 +336,28 @@ const App = () => {
         <button type='submit'>Add Note</button>
       )}
     </form>
+    
 
     <div className="notes-grid">
       {filteredNotes.map((note) => (
-        <div className="note-item"
-          onClick={() => handleNoteClick(note)}>
-        <div className="notes-header">
-          <button onClick={(event) => 
-            deleteNote(event, note.id)}>
-            x
-          </button>
+        <div className="note-item" onClick={() => handleNoteClick(note)} key={note.id}>
+          <div className="notes-header">
+            <div className="note-tags">
+              {note.tags.map((tag, index) => (
+                <span key={index} className="note-tag">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+            <button onClick={(event) => deleteNote(event, note.id)}>X</button>
+          </div>
+          <h2>
+            {highlightText(note.title, searchQuery)}
+          </h2>
+          <p className='note-content'>
+            {highlightText(note.content, searchQuery)}
+          </p>
         </div>
-        <h2>
-          {highlightText(note.title, searchQuery)}
-        </h2>
-        <p className='note-content'>
-          {highlightText(note.content, searchQuery)}
-        </p>
-      </div>
       ))}
     </div>
 
