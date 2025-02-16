@@ -14,7 +14,14 @@ type NoteResponse = {
   id: number;
   title: string;
   content: string;
-  tags: { tag: { name: string } }[];
+  tags: { noteId: number; tagId: number; name: string }[];
+};
+
+// Type for use by notes in frontend
+type Tag = {
+  noteId: number;
+  tagId: number;
+  name: string;
 };
 
 // Type for use by notes in frontend
@@ -22,7 +29,7 @@ type Note = {
   id: number;
   title: string;
   content: string;
-  tags: string[];  // Adjusted to be just strings
+  tags: { noteId: number; tagId: number; name: string }[];
 };
 
 
@@ -56,12 +63,15 @@ const App = () => {
         const response = await fetch("http://localhost:5000/api/notes");
         const notesData: NoteResponse[] = await response.json();
         
-        // Map the backend structure to the frontend structure
         const formattedNotes: Note[] = notesData.map(note => ({
           id: note.id,
           title: note.title,
           content: note.content,
-          tags: note.tags.map(tagObj => tagObj.tag.name)  // Extract tag names
+          tags: note.tags.map(tag => ({
+            noteId: tag.noteId,
+            tagId: tag.tagId,
+            name: tag.name
+          }))
         }));
         
         setNotes(formattedNotes);
@@ -78,7 +88,7 @@ const App = () => {
     setSelectedNote(note);
     setTitle(note.title);
     setContent(note.content);
-    setTags(note.tags);  // Load tags correctly
+    setTags(note.tags.map((tag) => tag.name)) // Load tags correctly
   };
 
 
@@ -103,7 +113,19 @@ const App = () => {
 
       const newNote = await response.json();
 
-      setNotes([newNote, ...notes]);
+      // Normalize the tags structure to match the GET response
+      const formattedNote: Note = {
+        id: newNote.id,
+        title: newNote.title,
+        content: newNote.content,
+        tags: newNote.tags.map((noteTag: any) => ({
+          noteId: noteTag.noteId,
+          tagId: noteTag.tagId,
+          name: noteTag.tag.name
+        }))
+      };
+
+      setNotes([formattedNote, ...notes]);
       setTitle("");
       setContent("");
       setTags([]);
@@ -135,8 +157,20 @@ const App = () => {
   
       const updatedNote = await response.json();
 
+      // Normalize the tags structure to match the GET response
+      const formattedNote: Note = {
+        id: updatedNote.id,
+        title: updatedNote.title,
+        content: updatedNote.content,
+        tags: updatedNote.tags.map((noteTag: any) => ({
+          noteId: noteTag.noteId,
+          tagId: noteTag.tagId,
+          name: noteTag.tag.name // Extract the name from the nested tag object in the JSON response
+        }))
+      };
+
       const updatedNotesList = notes.map((note) =>
-        note.id === selectedNote.id ? updatedNote : note
+        note.id === selectedNote.id ? formattedNote : note
       );
 
       setNotes(updatedNotesList);
@@ -343,11 +377,11 @@ const App = () => {
         <div className="note-item" onClick={() => handleNoteClick(note)} key={note.id}>
           <div className="notes-header">
             <div className="note-tags">
-              {note.tags.map((tag, index) => (
-                <span key={index} className="note-tag">
-                  #{tag}
-                </span>
-              ))}
+            {note.tags.map((tag, index) => (
+              <span key={index} className="note-tag">
+                #{tag.name}
+              </span>
+            ))}
             </div>
             <button onClick={(event) => deleteNote(event, note.id)}>X</button>
           </div>

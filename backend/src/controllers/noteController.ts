@@ -15,9 +15,10 @@ export const getNotes = async (req: Request, res: Response) => {
                 updatedAt: true,
                 tags: {
                     select: {
+                        noteId: true,
+                        tagId: true,
                         tag: {
                             select: {
-                                id: true,
                                 name: true
                             }
                         }
@@ -25,7 +26,18 @@ export const getNotes = async (req: Request, res: Response) => {
                 }
             }
         });
-        res.json(notes);
+
+        // Flatten tags to the expected format
+        const formattedNotes = notes.map(note => ({
+            ...note,
+            tags: note.tags.map(noteTag => ({
+                noteId: noteTag.noteId,
+                tagId: noteTag.tagId,
+                name: noteTag.tag.name
+            }))
+        }));
+
+        res.json(formattedNotes);
     } catch (error) {
         handleServerError(res, error, "Failed to fetch notes");
     }
@@ -66,6 +78,20 @@ export const createNote = async (req: Request, res: Response) => {
                 }
             }
         });
+
+        // Format the response to match the GET structure
+        const formattedNote = {
+            id: newNote.id,
+            title: newNote.title,
+            content: newNote.content,
+            createdAt: newNote.createdAt,
+            updatedAt: newNote.updatedAt,
+            tags: newNote.tags.map((noteTag) => ({
+                noteId: noteTag.noteId,
+                tagId: noteTag.tagId,
+                name: noteTag.tag.name // Flatten the tag structure
+            }))
+        };
 
         res.status(201).json(newNote);
     } catch (error) {
@@ -118,6 +144,20 @@ export const updateNote = async (req: Request, res: Response) => {
                 }
             }
         });
+
+        // Format the response to match the GET structure
+        const formattedNote = {
+            id: updatedNote.id,
+            title: updatedNote.title,
+            content: updatedNote.content,
+            createdAt: updatedNote.createdAt,
+            updatedAt: updatedNote.updatedAt,
+            tags: updatedNote.tags.map((noteTag) => ({
+                noteId: noteTag.noteId,
+                tagId: noteTag.tagId,
+                name: noteTag.tag.name // Flatten the tag structure
+            }))
+        };
 
         // Cleanup: Delete tags no longer associated with any notes
         await cleanupUnusedTags();

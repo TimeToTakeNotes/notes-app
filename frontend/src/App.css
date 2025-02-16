@@ -32,7 +32,7 @@ body{
 }
 
 .tag {
-  background-color: #60c868;
+  background-color: #7ab338;
   color: #333;
   border-radius: 20px;
   padding: 5px 10px;
@@ -41,7 +41,7 @@ body{
 }
 
 .remove-tag-btn {
-  background-color: #60c868 !important;
+  background-color: #7ab338 !important;
   background: none;
   border: none;
   color: white;
@@ -63,12 +63,18 @@ body{
   display: flex;
   justify-content: flex-start;
   flex-wrap: wrap;
-  background-color: #60c868;
+  background-color: #7ab338;
   color: #333;
   padding: 5px 10px;
   border-radius: 20px;
   margin: 5px 5px 10px 0;
   font-size: 12px;
+}
+
+.note-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 
 .note-tag:hover {
@@ -91,7 +97,7 @@ body{
   border: 1px solid #ccc;
   padding: 10px;
   border-radius: 5px;
-  background-color: #e9f5db;
+  background-color: white;
   box-shadow: 0px 0px 10px
     rgba(0, 0, 0, 0.1);
   cursor: pointer;
@@ -129,7 +135,7 @@ h2{
 
 textarea,
 input{
-  background-color: #e9f5db;
+  background-color: white;
   resize: none;
   border-radius: 5px;
   border: 1px solid black;
@@ -190,7 +196,7 @@ input{
 
 .note-form button{
   border-radius: 5px;
-  background-color: #718355;
+  background-color: #7ab338;
   border: none;
   padding: 10px;
   font-size: 16px;
