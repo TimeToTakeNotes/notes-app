@@ -2,20 +2,73 @@ body{
   margin: 12px;
   padding: 0;
   font-family: 'Arial', sans-serif;
-  background-color: #b5c99a;
+  background-color: #c2deec;
   color: #333;
 }
 
 .app-container{
+  padding-top: 65px;
   grid-template-columns: 1fr;
-  max-width: 1200px;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
-.search-bar {
-  width: auto;
+.top-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background-color: #88ccee;
+  border-bottom: 1px solid #c2deec;
+  z-index: 1000;
+}
+
+.burger-menu {
+  background-color: transparent;
+  color: #0F4C81;
+  font-size: 32px;
+  cursor: pointer;
+  border: none;
+}
+
+.add-note-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.add-note-button {
+  padding: 10px;
+  font-size: 32px;
+  background-color: #0F4C81;
+  color: white;
+  border: none;
+  border-radius: 100%;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+  margin-bottom: 15px;
+  margin-left: 15px;
+}
+
+.add-note-button.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.add-note-button:hover {
+  background-color: #88CCEE;
+}
+
+.search-bar input {
+  width: 200px;
   padding: 5px;
+  margin-right: 20px;
   border: 1px solid black;
-  font-size: 13.5px;
+  font-size: 16px;
   box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
 }
 
@@ -32,7 +85,7 @@ body{
 }
 
 .tag {
-  background-color: #7ab338;
+  background-color: #88CCEE;
   color: #333;
   border-radius: 20px;
   padding: 5px 10px;
@@ -41,7 +94,7 @@ body{
 }
 
 .remove-tag-btn {
-  background-color: #7ab338 !important;
+  background-color: #88CCEE !important;
   background: none;
   border: none;
   color: white;
@@ -49,26 +102,26 @@ body{
 }
 
 .remove-tag-btn:hover {
-  color: #ff6666;
+  color: #ff6f61;
 }
 
 .tags-input {
   width: auto;
   padding: 5px;
   border: 1px solid black;
-  font-size: 13.5px;
+  font-size: 16px;
 }
 
 .note-tag {
   display: flex;
   justify-content: flex-start;
   flex-wrap: wrap;
-  background-color: #7ab338;
+  background-color: #88CCEE;
   color: #333;
   padding: 5px 10px;
   border-radius: 20px;
   margin: 5px 5px 10px 0;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .note-tags {
@@ -77,17 +130,10 @@ body{
   gap: 5px;
 }
 
-.note-tag:hover {
-  background-color: #c1d7b6;
-}
-
 .notes-grid{
   display: grid;
-  grid-template-columns: repeat(
-    auto-fill, 
-    minmax(250px, 1fr)
-  );
-  grid-auto-rows: minmax(250px, auto);
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  margin-left: 10px;
   gap: 20px;
 }
 
@@ -101,6 +147,7 @@ body{
   box-shadow: 0px 0px 10px
     rgba(0, 0, 0, 0.1);
   cursor: pointer;
+  word-break: break-word;
 }
 
 .notes-header {
@@ -118,19 +165,26 @@ body{
 }
 
 .notes-header button:hover {
-  color: #ff6666;
+  color: #ff6f61;
 }
 
 
 h2{
   margin: 0;
-  font-size: 18px;
+  font-size: 21px;
 }
 
 .note-form{
-  display: flex;
+  flex: 1;
+  display: none;
   flex-direction: column;
   gap: 20px;
+  transition: opacity 0.3s ease;
+}
+
+.note-form.visible {
+  display: flex;
+  opacity: 1;
 }
 
 textarea,
@@ -171,7 +225,7 @@ input{
 
  .note-content {
   white-space: pre-wrap;
-  font-size: 14px;
+  font-size: 16px;
  }
  
  form .mic-button .fa-microphone {
@@ -196,15 +250,15 @@ input{
 
 .note-form button{
   border-radius: 5px;
-  background-color: #7ab338;
+  background-color: #0F4C81;
   border: none;
   padding: 10px;
   font-size: 16px;
-  color: black;
+  color: white;
 }
 
 .note-form button:hover{
-  background-color: #87986a;
+  background-color: #88ccee;
   cursor: pointer;
 }
 
@@ -219,7 +273,12 @@ input{
 }
 
 .edit-buttons button:last-of-type{
-  background-color: rgb(220, 89, 89);
+  background-color: #ff6f61;
+  color: white;
+}
+
+.edit-buttons button:last-of-type:hover{
+  background-color: rgb(148, 34, 34);
   color: white;
 }
 

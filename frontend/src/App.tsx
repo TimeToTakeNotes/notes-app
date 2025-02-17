@@ -1,12 +1,12 @@
 import React, {useEffect, useState} from 'react';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMicrophone } from '@fortawesome/free-solid-svg-icons';
+import { faMicrophone, faNotesMedical, faBars, faArrowRight, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import "./App.css";
 
 
 // Add the FontAwesom icons to the library
-library.add(faMicrophone);
+library.add(faMicrophone, faNotesMedical, faBars, faArrowRight, faArrowLeft);
 
 
 // Type for response structure from backend
@@ -44,12 +44,16 @@ const App = () => {
   const [ isRecording, setIsRecording ] = useState(false);
   const [ mediaRecorder, setMediaRecorder ] = useState<MediaRecorder | null>(null);
 
-  const [transcription, setTranscription] = useState<string | null>(null);
+  const [ transcription, setTranscription ] = useState<string | null>(null);
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [ searchQuery, setSearchQuery ] = useState("");
 
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
+  const [ tags, setTags ] = useState<string[]>([]);
+  const [ tagInput, setTagInput ] = useState("");
+
+  const [ isFormVisible, setIsFormVisible ] = useState(false);
+
+  const [ isHovered, setIsHovered ] = useState(false);
 
 
   useEffect(() => {
@@ -89,6 +93,7 @@ const App = () => {
     setTitle(note.title);
     setContent(note.content);
     setTags(note.tags.map((tag) => tag.name)) // Load tags correctly
+    setIsFormVisible(true);
   };
 
 
@@ -188,6 +193,7 @@ const App = () => {
     setContent("")
     setTags([]);
     setSelectedNote(null);
+    setIsFormVisible(false);
   };
 
   const deleteNote = async (event: React.MouseEvent, noteId: number) => {
@@ -294,108 +300,146 @@ const App = () => {
     setTags(tags.filter((_, index) => index !== indexToRemove));
   };
 
+  const burgerMouseEnter = () => {
+    setIsHovered(true);
+  }
+
+  const burgerMouseLeave = () => {
+    setIsHovered(false);
+  }
 
 
-  return(<div className="app-container">
-    <form className="note-form" 
-      onSubmit={(event) => 
-        selectedNote ? handleUpdateNote(event) : handleAddNote(event)}>
-
-      <input 
-        type="text"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        placeholder="Search notes..."
-        className="search-bar">
-      </input>
-            
-      <input 
-        value={title}
-        onChange={(event) =>
-          setTitle(event.target.value)
-        }
-        placeholder="Title"
-        required>
-      </input>
-
-      <div className="textarea-container">
-        <textarea
-          value={content}
-          onChange={(event) =>
-            setContent(event.target.value)
-          }
-          placeholder="Content" 
-          rows={10} 
-          required>
-        </textarea>
-        <button className='mic-button' type='button' 
-          onClick={isRecording ? stopRecording : startRecording}
-          title={isRecording ? 'Stop recording' : 'Start voice input'}>
-          <FontAwesomeIcon icon={faMicrophone}/>
-        </button>
-
-        {transcription && <p className='transcription-feedback'>{transcription}</p>}
+  return( <>
+    <div className='top-header' >
+      <button className='burger-menu' 
+        type='button'
+        onMouseEnter={burgerMouseEnter}
+        onMouseLeave={burgerMouseLeave}>
+        <FontAwesomeIcon icon={isHovered ? faArrowRight : faBars}/>
+      </button>
+      <div className='search-bar'>
+        <input 
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search notes...">
+        </input>
       </div>
-
-
-      <div className="tags-container">
-        {tags.map((tag, index) => (
-          <span key={index} className="tag">
-            {tag} 
-            <button 
-              type="button" 
-              className="remove-tag-btn"
-              onClick={() => removeTag(index)}
-            >
-              &times;
-            </button>
-          </span>
-        ))}
-      </div>
-      <input 
-        type="text"
-        placeholder={tags.length < 3 ? "Add a tag..." : "Max 3 tags"}
-        value={tagInput}
-        onChange={(e) => setTagInput(e.target.value)}
-        onKeyDown={addTag}
-        disabled={tags.length >= 3}
-        className='tags-input'/>
-
-      {selectedNote ? (
-        <div className='edit-buttons'>
-          <button type='submit'>Save</button>
-          <button type='button' onClick={handleCancel}>Cancel</button>
-        </div>
-      ) : (
-        <button type='submit'>Add Note</button>
-      )}
-    </form>
-    
-
-    <div className="notes-grid">
-      {filteredNotes.map((note) => (
-        <div className="note-item" onClick={() => handleNoteClick(note)} key={note.id}>
-          <div className="notes-header">
-            <div className="note-tags">
-            {note.tags.map((tag, index) => (
-              <span key={index} className="note-tag">
-                #{tag.name}
-              </span>
-            ))}
-            </div>
-            <button onClick={(event) => deleteNote(event, note.id)}>X</button>
-          </div>
-          <h2>
-            {highlightText(note.title, searchQuery)}
-          </h2>
-          <p className='note-content'>
-            {highlightText(note.content, searchQuery)}
-          </p>
-        </div>
-      ))}
     </div>
 
-  </div>)
+    <div className="app-container">
+      <div className='add-note-container'>
+        {!isFormVisible && (
+          <button className='add-note-button' type='button' 
+            onClick={() => {
+              setSelectedNote(null);
+              setTitle("");
+              setContent("");
+              setTags([]);
+              setIsFormVisible(!isFormVisible);
+            }}>
+            <FontAwesomeIcon icon={faNotesMedical}/>
+          </button>
+        )}
+      
+
+        {isFormVisible && (
+          <form className="note-form visible" 
+            onSubmit={(event) => 
+              selectedNote ? handleUpdateNote(event) : handleAddNote(event)}>
+                  
+            <input 
+              value={title}
+              onChange={(event) =>
+                setTitle(event.target.value)
+              }
+              placeholder="Title"
+              required>
+            </input>
+
+            <div className="textarea-container">
+              <textarea
+                value={content}
+                onChange={(event) =>
+                  setContent(event.target.value)
+                }
+                placeholder="Content" 
+                rows={10} 
+                required>
+              </textarea>
+              <button className='mic-button' type='button' 
+                onClick={isRecording ? stopRecording : startRecording}
+                title={isRecording ? 'Stop recording' : 'Start voice input'}>
+                <FontAwesomeIcon icon={faMicrophone}/>
+              </button>
+
+              {transcription && <p className='transcription-feedback'>{transcription}</p>}
+            </div>
+
+
+            <div className="tags-container">
+              {tags.map((tag, index) => (
+                <span key={index} className="tag">
+                  {tag} 
+                  <button 
+                    type="button" 
+                    className="remove-tag-btn"
+                    onClick={() => removeTag(index)}
+                  >
+                    &times;
+                  </button>
+                </span>
+              ))}
+            </div>
+            <input 
+              type="text"
+              placeholder={tags.length < 3 ? "Add a tag..." : "Max 3 tags"}
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={addTag}
+              disabled={tags.length >= 3}
+              className='tags-input'/>
+
+            {selectedNote ? (
+              <div className='edit-buttons'>
+                <button type='submit'>Save</button>
+                <button type='button' onClick={handleCancel}>Cancel</button>
+              </div>
+            ) : (
+              <div className='edit-buttons'>
+                <button type='submit'>Add Note</button>
+                <button type='button' onClick={handleCancel}>Cancel</button>
+              </div>
+            )}
+          </form>
+        )}
+      </div>
+    
+
+      <div className="notes-grid">
+        {filteredNotes.map((note) => (
+          <div className="note-item" onClick={() => handleNoteClick(note)} key={note.id}>
+            <div className="notes-header">
+              <div className="note-tags">
+              {note.tags.map((tag, index) => (
+                <span key={index} className="note-tag">
+                  #{tag.name}
+                </span>
+              ))}
+              </div>
+              <button onClick={(event) => deleteNote(event, note.id)}>X</button>
+            </div>
+            <h2>
+              {highlightText(note.title, searchQuery)}
+            </h2>
+            <p className='note-content'>
+              {highlightText(note.content, searchQuery)}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </>)
 };
 
 export default App;
