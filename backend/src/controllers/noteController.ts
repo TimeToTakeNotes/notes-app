@@ -4,6 +4,41 @@ import prisma from "../db";
 import { getUniqueTags, cleanupUnusedTags, handleServerError, validateId } from "../utils/tagUtils";
 
 
+// Interfaces for type safety
+interface NoteRequest {
+    title: string;
+    content: string;
+    isPinned: boolean;
+    tags: string[];
+}
+
+interface FormattedNote {
+    id: number;
+    title: string;
+    content: string;
+    isPinned: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    tags: {
+        noteId: number;
+        tagId: number;
+        name: string;
+    }[];
+}
+
+
+// Helper to format note
+const formatNote = (note: any): FormattedNote => ({
+    ...note,
+    tags: note.tags.map((noteTag: any) => ({
+        noteId: noteTag.noteId,
+        tagId: noteTag.tagId,
+        name: noteTag.tag.name
+    }))
+});
+
+
+
 export const getNotes = async (req: Request, res: Response) => {
     try {
         const notes = await prisma.note.findMany({
@@ -11,6 +46,7 @@ export const getNotes = async (req: Request, res: Response) => {
                 id: true,
                 title: true,
                 content: true,
+                isPinned: true,
                 createdAt: true,
                 updatedAt: true,
                 tags: {
@@ -28,14 +64,7 @@ export const getNotes = async (req: Request, res: Response) => {
         });
 
         // Flatten tags to the expected format
-        const formattedNotes = notes.map(note => ({
-            ...note,
-            tags: note.tags.map(noteTag => ({
-                noteId: noteTag.noteId,
-                tagId: noteTag.tagId,
-                name: noteTag.tag.name
-            }))
-        }));
+        const formattedNotes = notes.map(formatNote);
 
         res.json(formattedNotes);
     } catch (error) {
@@ -45,7 +74,7 @@ export const getNotes = async (req: Request, res: Response) => {
 
 
 export const createNote = async (req: Request, res: Response) => {
-    const { title, content, tags } = req.body as { title: string; content: string; tags: string[] };
+    const { title, content, tags, isPinned } = req.body as NoteRequest;
 
     if (!title || !content) {
         res.status(400).json({ error: "Title and content are required" });
@@ -59,6 +88,7 @@ export const createNote = async (req: Request, res: Response) => {
             data: {
                 title,
                 content,
+                isPinned: isPinned || false,
                 tags: {
                     create: uniqueTags.map((tagName) => ({
                         tag: {
@@ -79,21 +109,7 @@ export const createNote = async (req: Request, res: Response) => {
             }
         });
 
-        // Format the response to match the GET structure
-        const formattedNote = {
-            id: newNote.id,
-            title: newNote.title,
-            content: newNote.content,
-            createdAt: newNote.createdAt,
-            updatedAt: newNote.updatedAt,
-            tags: newNote.tags.map((noteTag) => ({
-                noteId: noteTag.noteId,
-                tagId: noteTag.tagId,
-                name: noteTag.tag.name // Flatten the tag structure
-            }))
-        };
-
-        res.status(201).json(newNote);
+        res.status(201).json(formatNote(newNote));
     } catch (error) {
         handleServerError(res, error, "Failed to create note");
     }
@@ -102,7 +118,7 @@ export const createNote = async (req: Request, res: Response) => {
 
 export const updateNote = async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
-    const { title, content, tags } = req.body as { title: string; content: string; tags: string[] };
+    const { title, content, tags, isPinned } = req.body as NoteRequest;
 
     if (!validateId(id, res)) return;
 
@@ -125,6 +141,7 @@ export const updateNote = async (req: Request, res: Response) => {
             data: {
                 title,
                 content,
+                isPinned: isPinned !== undefined ? isPinned : false,
                 tags: {
                     create: uniqueTags.map((tagName) => ({
                         tag: {
@@ -145,24 +162,10 @@ export const updateNote = async (req: Request, res: Response) => {
             }
         });
 
-        // Format the response to match the GET structure
-        const formattedNote = {
-            id: updatedNote.id,
-            title: updatedNote.title,
-            content: updatedNote.content,
-            createdAt: updatedNote.createdAt,
-            updatedAt: updatedNote.updatedAt,
-            tags: updatedNote.tags.map((noteTag) => ({
-                noteId: noteTag.noteId,
-                tagId: noteTag.tagId,
-                name: noteTag.tag.name // Flatten the tag structure
-            }))
-        };
-
         // Cleanup: Delete tags no longer associated with any notes
         await cleanupUnusedTags();
 
-        res.status(200).json(updatedNote);
+        res.status(200).json(formatNote(updatedNote));
     } catch (error) {
         handleServerError(res, error, "Failed to update note");
     }
@@ -191,5 +194,36 @@ export const deleteNote = async (req: Request, res: Response) => {
         res.status(204).send();
     } catch (error) {
         handleServerError(res, error, "Failed to delete note");
+    }
+};
+
+
+export const updatePin = async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id);
+    const isPinned = req.body.isPinned === true || req.body.isPinned === 'true';
+    
+
+    if (isNaN(id)) {
+        res.status(400).json({ error: "Invalid note ID" });
+        return;
+    }    
+
+    try {
+        console.log("Updating note:", { id, isPinned });
+
+        const note = await prisma.note.findUnique({ where: { id } });
+        if (!note) {
+            res.status(404).json({ error: "Note not found" });
+            return;
+        }
+
+        const updatedNote = await prisma.note.update({
+            where: { id },
+            data: { isPinned },
+        });
+
+        res.status(200).json(formatNote(updatedNote));
+    } catch (error) {
+        handleServerError(res, error, "Failed to update pinned status");
     }
 };

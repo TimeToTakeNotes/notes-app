@@ -156,6 +156,11 @@ body{
   align-items: center;
 }
 
+.note-header-buttons {
+  display: flex;
+  gap: 15px;
+}
+
 .notes-header button {
   font-size: 16px;
   background: transparent;
@@ -164,10 +169,13 @@ body{
   max-width: fit-content;
 }
 
-.notes-header button:hover {
+.delete-note:hover {
   color: #ff6f61;
 }
 
+.pin:hover {
+  color: #0F4C81;
+}
 
 h2{
   margin: 0;

@@ -2,11 +2,13 @@ import React, {useEffect, useState} from 'react';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrophone, faNotesMedical, faBars, faArrowRight, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faStar as faSolidStar } from '@fortawesome/free-solid-svg-icons';
+import { faStar as faRegularStar } from '@fortawesome/free-regular-svg-icons';
 import "./App.css";
 
 
 // Add the FontAwesom icons to the library
-library.add(faMicrophone, faNotesMedical, faBars, faArrowRight, faArrowLeft);
+library.add(faMicrophone, faNotesMedical, faBars, faArrowRight, faArrowLeft, faSolidStar, faRegularStar);
 
 
 // Type for response structure from backend
@@ -15,6 +17,7 @@ type NoteResponse = {
   title: string;
   content: string;
   tags: { noteId: number; tagId: number; name: string }[];
+  isPinned: boolean;
 };
 
 // Type for use by notes in frontend
@@ -30,6 +33,7 @@ type Note = {
   title: string;
   content: string;
   tags: { noteId: number; tagId: number; name: string }[];
+  isPinned: boolean;
 };
 
 
@@ -75,7 +79,8 @@ const App = () => {
             noteId: tag.noteId,
             tagId: tag.tagId,
             name: tag.name
-          }))
+          })),
+          isPinned: note.isPinned
         }));
         
         setNotes(formattedNotes);
@@ -101,7 +106,6 @@ const App = () => {
     event.preventDefault();
 
     try {
-
       const response = await fetch("http://localhost:5000/api/notes", 
         {
           method:"POST",
@@ -112,6 +116,7 @@ const App = () => {
             title,
             content,
             tags,
+            isPinned: false
           })
         }
       );
@@ -127,7 +132,8 @@ const App = () => {
           noteId: noteTag.noteId,
           tagId: noteTag.tagId,
           name: noteTag.tag.name
-        }))
+        })),
+        isPinned: newNote.isPinned
       };
 
       setNotes([formattedNote, ...notes]);
@@ -157,6 +163,7 @@ const App = () => {
           title,
           content,
           tags,
+          isPinned: selectedNote.isPinned
         }),
       });
   
@@ -171,7 +178,8 @@ const App = () => {
           noteId: noteTag.noteId,
           tagId: noteTag.tagId,
           name: noteTag.tag.name // Extract the name from the nested tag object in the JSON response
-        }))
+        })),
+        isPinned: updatedNote.isPinned
       };
 
       const updatedNotesList = notes.map((note) =>
@@ -259,11 +267,14 @@ const App = () => {
     setMediaRecorder(null);
   };
 
-  const filteredNotes = notes.filter(
-    (note) => 
+  const filteredNotes = notes
+  .filter(
+    (note) =>
       note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
       note.content.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  )
+  .sort((a, b) => (a.isPinned === b.isPinned) ? 0 : a.isPinned ? -1 : 1);
+
 
   const highlightText = (text: string, query: string) => {
     if (!query) return text;
@@ -307,6 +318,37 @@ const App = () => {
   const burgerMouseLeave = () => {
     setIsHovered(false);
   }
+
+  const togglePin = async (noteId: number) => {
+    const noteToToggle = notes.find((note) => note.id === noteId);
+  
+    if (!noteToToggle) return;
+  
+    const updatedNote = {
+      ...noteToToggle,
+      isPinned: !noteToToggle.isPinned
+    };
+  
+    try {
+      await fetch(`http://localhost:5000/api/notes/${noteId}/pin`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isPinned: updatedNote.isPinned }),
+      });
+
+     
+  
+      const updatedNotesList = notes.map((note) =>
+        note.id === noteId ? updatedNote : note
+      );
+  
+      setNotes(updatedNotesList);
+    } catch (e) {
+      console.log(e);
+    }
+  };
 
 
   return( <>
@@ -421,13 +463,22 @@ const App = () => {
           <div className="note-item" onClick={() => handleNoteClick(note)} key={note.id}>
             <div className="notes-header">
               <div className="note-tags">
-              {note.tags.map((tag, index) => (
-                <span key={index} className="note-tag">
-                  #{tag.name}
-                </span>
-              ))}
+                {note.tags.map((tag, index) => (
+                  <span key={index} className="note-tag">
+                    #{tag.name}
+                  </span>
+                ))}
               </div>
-              <button onClick={(event) => deleteNote(event, note.id)}>X</button>
+              <div className='note-header-buttons'>
+                <button className='pin'
+                  onClick={(event) => {
+                    event.stopPropagation(); // Prevents triggering onClick of the note itself
+                    togglePin(note.id);
+                  }}>
+                  <FontAwesomeIcon icon={note.isPinned ? faSolidStar : faRegularStar}/></button>
+                <button className='delete-note' onClick={(event) => deleteNote(event, note.id)}>X</button>
+              </div>
+              
             </div>
             <h2>
               {highlightText(note.title, searchQuery)}

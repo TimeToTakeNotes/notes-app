@@ -13,11 +13,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Category {
+  GENERAL
+  WORK
+  PERSONAL
+  OTHER
+}
+
 model Note {
   id        Int       @id @default(autoincrement())
   title     String
   content   String    @db.Text
   tags      NoteTag[]
+  category  Category?
+  isPinned  Boolean   @default(false)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
 }
