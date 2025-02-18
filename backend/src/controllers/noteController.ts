@@ -1,13 +1,14 @@
 import { Request, Response } from "express";
 import prisma from "../db";
 
-import { getUniqueTags, cleanupUnusedTags, handleServerError, validateId } from "../utils/tagUtils";
+import { getUniqueTags, cleanupUnusedTags, handleServerError, validateId } from "../utils/controllerUtils";
 
 
 // Interfaces for type safety
 interface NoteRequest {
     title: string;
     content: string;
+    category?: "GENERAL" | "WORK" | "PERSONAL" | "OTHER";
     isPinned: boolean;
     tags: string[];
 }
@@ -16,6 +17,7 @@ interface FormattedNote {
     id: number;
     title: string;
     content: string;
+    category?: string;
     isPinned: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -30,6 +32,7 @@ interface FormattedNote {
 // Helper to format note
 const formatNote = (note: any): FormattedNote => ({
     ...note,
+    category: note.category || "GENERAL",
     tags: note.tags.map((noteTag: any) => ({
         noteId: noteTag.noteId,
         tagId: noteTag.tagId,
@@ -38,14 +41,16 @@ const formatNote = (note: any): FormattedNote => ({
 });
 
 
-
+// CRUD Operations
 export const getNotes = async (req: Request, res: Response) => {
     try {
         const notes = await prisma.note.findMany({
+            orderBy: { createdAt: 'desc' },
             select: {
                 id: true,
                 title: true,
                 content: true,
+                category: true,
                 isPinned: true,
                 createdAt: true,
                 updatedAt: true,
@@ -74,10 +79,16 @@ export const getNotes = async (req: Request, res: Response) => {
 
 
 export const createNote = async (req: Request, res: Response) => {
-    const { title, content, tags, isPinned } = req.body as NoteRequest;
+    const { title, content, tags, isPinned, category } = req.body as NoteRequest;
 
     if (!title || !content) {
         res.status(400).json({ error: "Title and content are required" });
+        return;
+    }
+
+    const validCategories = ["GENERAL", "WORK", "PERSONAL", "OTHER"];
+    if (category && !validCategories.includes(category)) {
+        res.status(400).json({ error: "Invalid category" });
         return;
     }
 
@@ -88,6 +99,7 @@ export const createNote = async (req: Request, res: Response) => {
             data: {
                 title,
                 content,
+                category: category || "GENERAL",
                 isPinned: isPinned || false,
                 tags: {
                     create: uniqueTags.map((tagName) => ({
@@ -118,12 +130,18 @@ export const createNote = async (req: Request, res: Response) => {
 
 export const updateNote = async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
-    const { title, content, tags, isPinned } = req.body as NoteRequest;
+    const { title, content, tags, isPinned, category } = req.body as NoteRequest;
 
     if (!validateId(id, res)) return;
 
     if (!title || !content) {
         res.status(400).json({ error: "Title and content are required" });
+        return;
+    }
+
+    const validCategories = ["GENERAL", "WORK", "PERSONAL", "OTHER"];
+    if (category && !validCategories.includes(category)) {
+        res.status(400).json({ error: "Invalid category" });
         return;
     }
 
@@ -141,6 +159,7 @@ export const updateNote = async (req: Request, res: Response) => {
             data: {
                 title,
                 content,
+                category: category || "GENERAL",
                 isPinned: isPinned !== undefined ? isPinned : false,
                 tags: {
                     create: uniqueTags.map((tagName) => ({

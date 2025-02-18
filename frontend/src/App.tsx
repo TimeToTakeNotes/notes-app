@@ -1,9 +1,13 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
+
+import useFetchNotes from './hooks/useFetchNotes';
+
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrophone, faNotesMedical, faBars, faArrowRight, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faSolidStar } from '@fortawesome/free-solid-svg-icons';
 import { faStar as faRegularStar } from '@fortawesome/free-regular-svg-icons';
+
 import "./App.css";
 
 
@@ -16,8 +20,10 @@ type NoteResponse = {
   id: number;
   title: string;
   content: string;
-  tags: { noteId: number; tagId: number; name: string }[];
+  category: string;
   isPinned: boolean;
+  tags: { noteId: number; tagId: number; name: string }[];
+  
 };
 
 // Type for use by notes in frontend
@@ -32,13 +38,16 @@ type Note = {
   id: number;
   title: string;
   content: string;
-  tags: { noteId: number; tagId: number; name: string }[];
+  category: string;
   isPinned: boolean;
+  tags: { noteId: number; tagId: number; name: string }[];
+  
 };
 
 
 const App = () => {
-  const [notes, setNotes] = useState<Note[]>([]);
+  const { notes, setNotes } = useFetchNotes();
+
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -59,6 +68,18 @@ const App = () => {
 
   const [ isHovered, setIsHovered ] = useState(false);
 
+  const [ category, setCategory ] = useState("");
+
+  const [ selectedCategory, setSelectedCategory ] = useState("");
+  const [ isSidebarOpen, setIsSidebarOpen ] = useState(false);
+
+
+  const burgerRef = useRef<HTMLButtonElement | null>(null);
+  const sidebarRef = useRef<HTMLDivElement | null>(null);
+
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+
 
   useEffect(() => {
     document.title = "Notes App";
@@ -66,30 +87,30 @@ const App = () => {
 
 
   useEffect(() => {
-    const fetchNotes = async () => {
-      try {
-        const response = await fetch("http://localhost:5000/api/notes");
-        const notesData: NoteResponse[] = await response.json();
-        
-        const formattedNotes: Note[] = notesData.map(note => ({
-          id: note.id,
-          title: note.title,
-          content: note.content,
-          tags: note.tags.map(tag => ({
-            noteId: tag.noteId,
-            tagId: tag.tagId,
-            name: tag.name
-          })),
-          isPinned: note.isPinned
-        }));
-        
-        setNotes(formattedNotes);
-      } catch (e) {
-        console.log(e);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        sidebarRef.current &&
+        burgerRef.current &&
+        !sidebarRef.current.contains(event.target as Node) &&
+        !burgerRef.current.contains(event.target as Node)
+      ) {
+        setIsSidebarOpen(false);
       }
     };
   
-    fetchNotes();
+    document.addEventListener('mousedown', handleClickOutside);
+  
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+
+  useEffect(() => {
+    if (headerRef.current) {
+      const headerHeight = headerRef.current.offsetHeight;
+      document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
+    }
   }, []);
 
 
@@ -115,8 +136,9 @@ const App = () => {
           body: JSON.stringify({
             title,
             content,
-            tags,
-            isPinned: false
+            category,
+            isPinned: false,
+            tags,  
           })
         }
       );
@@ -128,18 +150,21 @@ const App = () => {
         id: newNote.id,
         title: newNote.title,
         content: newNote.content,
+        category: newNote.category,
+        isPinned: newNote.isPinned,
         tags: newNote.tags.map((noteTag: any) => ({
           noteId: noteTag.noteId,
           tagId: noteTag.tagId,
           name: noteTag.tag.name
-        })),
-        isPinned: newNote.isPinned
+        }))
       };
 
       setNotes([formattedNote, ...notes]);
       setTitle("");
       setContent("");
+      setCategory("");
       setTags([]);
+      setIsFormVisible(false);
     } catch (e) {
       console.log(e);
     }
@@ -162,6 +187,7 @@ const App = () => {
         body: JSON.stringify({
           title,
           content,
+          category,
           tags,
           isPinned: selectedNote.isPinned
         }),
@@ -174,12 +200,13 @@ const App = () => {
         id: updatedNote.id,
         title: updatedNote.title,
         content: updatedNote.content,
+        category: updatedNote.category,
+        isPinned: updatedNote.isPinned,
         tags: updatedNote.tags.map((noteTag: any) => ({
           noteId: noteTag.noteId,
           tagId: noteTag.tagId,
           name: noteTag.tag.name // Extract the name from the nested tag object in the JSON response
-        })),
-        isPinned: updatedNote.isPinned
+        }))
       };
 
       const updatedNotesList = notes.map((note) =>
@@ -189,8 +216,10 @@ const App = () => {
       setNotes(updatedNotesList);
       setTitle("");
       setContent("");
+      setCategory("");
       setTags([]);
       setSelectedNote(null);
+      setIsFormVisible(false);
     } catch (e) {
       console.log(e);
     }
@@ -199,6 +228,7 @@ const App = () => {
   const handleCancel = () => {
     setTitle("")
     setContent("")
+    setCategory("");
     setTags([]);
     setSelectedNote(null);
     setIsFormVisible(false);
@@ -270,8 +300,9 @@ const App = () => {
   const filteredNotes = notes
   .filter(
     (note) =>
-      note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      note.content.toLowerCase().includes(searchQuery.toLowerCase())
+      (selectedCategory === "" || note.category === selectedCategory) && 
+      (note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      note.content.toLowerCase().includes(searchQuery.toLowerCase()))
   )
   .sort((a, b) => (a.isPinned === b.isPinned) ? 0 : a.isPinned ? -1 : 1);
 
@@ -350,14 +381,33 @@ const App = () => {
     }
   };
 
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const handleCategoryClick = (category: string) => {
+    setSelectedCategory(category);
+    setIsSidebarOpen(false);
+  };
+
+  
 
   return( <>
-    <div className='top-header' >
-      <button className='burger-menu' 
+    <div ref={headerRef} className='top-header'>
+      <button 
+        ref={burgerRef}
+        className='burger-menu' 
         type='button'
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent event from reaching document listener to prevent sidebar open/close glitch
+          toggleSidebar();
+        }}
         onMouseEnter={burgerMouseEnter}
         onMouseLeave={burgerMouseLeave}>
-        <FontAwesomeIcon icon={isHovered ? faArrowRight : faBars}/>
+        <FontAwesomeIcon 
+          icon={isHovered || isSidebarOpen ? faArrowRight : faBars} 
+          className={`arrow-icon ${isSidebarOpen ? 'rotate' : ''}`}
+        />
       </button>
       <div className='search-bar'>
         <input 
@@ -367,6 +417,36 @@ const App = () => {
           placeholder="Search notes...">
         </input>
       </div>
+    </div>
+
+    <div ref={sidebarRef} className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
+      <ul className="category-list">
+        <li 
+          className={selectedCategory === "" ? "active" : ""}
+          onClick={() => handleCategoryClick("")}>
+          All Notes
+        </li>
+        <li 
+          className={selectedCategory === "GENERAL" ? "active" : ""}
+          onClick={() => handleCategoryClick("GENERAL")}>
+          GENERAL
+        </li>
+        <li 
+          className={selectedCategory === "WORK" ? "active" : ""}
+          onClick={() => handleCategoryClick("WORK")}>
+          WORK
+        </li>
+        <li 
+          className={selectedCategory === "PERSONAL" ? "active" : ""}
+          onClick={() => handleCategoryClick("PERSONAL")}>
+          PERSONAL
+        </li>
+        <li 
+          className={selectedCategory === "OTHER" ? "active" : ""}
+          onClick={() => handleCategoryClick("OTHER")}>
+          OTHER
+        </li>
+      </ul>
     </div>
 
     <div className="app-container">
@@ -414,10 +494,16 @@ const App = () => {
                 title={isRecording ? 'Stop recording' : 'Start voice input'}>
                 <FontAwesomeIcon icon={faMicrophone}/>
               </button>
-
               {transcription && <p className='transcription-feedback'>{transcription}</p>}
             </div>
 
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="category-dropdown">
+                <option value="">Select Category</option>
+                <option value="GENERAL">GENERAL</option>
+                <option value="WORK">WORK</option>
+                <option value="PERSONAL">PERSONAL</option>
+                <option value="OTHER">OTHER</option>
+              </select>
 
             <div className="tags-container">
               {tags.map((tag, index) => (
