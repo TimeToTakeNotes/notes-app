@@ -1,17 +1,21 @@
-import React, {useEffect, useState, useRef} from 'react';
+import {useEffect, useState, useRef} from 'react';
 
+// Import hooks
 import useFetchNotes from './hooks/useFetchNotes';
 import useOutsideClick from './hooks/useOutsideClick';
 import useHeaderHeight from './hooks/useHeaderHeight';
 
+// Import types
 import { Note } from "./types/noteTypes";
 
-import { addNote, updateNote, deleteNote, togglePin } from "./services/api/notesAPI";
-import { transcribeAudio } from './services/api/speechToTextAPI';
-
+// Import utils
 import { filterAndSortNotes } from './utils/filterNotes';
-
 import { highlightText } from "./utils/highlight";
+import { handleAddNote, handleUpdateNote, handleDeleteNote, handleTogglePin } from "./utils/noteHandlers";
+import { toggleSidebar, handleCategoryClick, burgerMouseEnter, burgerMouseLeave } from "./utils/sidebar";
+import { addTag, removeTag } from "./utils/tags";
+import { startRecording, stopRecording } from "./utils/voiceRecorder";
+
 
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -72,107 +76,6 @@ const App = () => {
   }, []);
 
 
-  const handleAddNote = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    try {
-      const newNote = await addNote(
-        title,
-        content,
-        category,
-        tags
-      );
-
-      if (newNote) {
-        setNotes([newNote, ...notes]);
-        setTitle("");
-        setContent("");
-        setCategory("");
-        setTags([]);
-        setIsFormVisible(false);
-      }
-    } catch (e) {
-      console.log(e);
-    }
-  };
-  
-
-  const handleUpdateNote = async (event: React.FormEvent) => {
-    event.preventDefault();
-  
-    if (!selectedNote) {
-      return;
-    }
-  
-    try {
-      const updatedNote = await updateNote(
-        selectedNote.id,
-        title,
-        content,
-        category,
-        tags,
-        selectedNote.isPinned
-      );
-
-      const updatedNotesList = notes.map((note) =>
-        note.id === selectedNote.id ? updatedNote : note
-      );
-
-      setNotes(updatedNotesList);
-      setTitle("");
-      setContent("");
-      setCategory("");
-      setTags([]);
-      setSelectedNote(null);
-      setIsFormVisible(false);
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
-
-  const handleDeleteNote = async (event: React.MouseEvent, noteId: number) => {
-    event.stopPropagation();
-
-    try {
-      await deleteNote(noteId);
-
-      const updatedNotes = notes.filter((note) => note.id !== noteId);
-
-      setNotes(updatedNotes);
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
-
-  const handleTogglePin = async (noteId: number) => {
-    const noteToToggle = notes.find((note) => note.id === noteId);
-  
-    if (!noteToToggle) return;
-  
-    const updatedNote = {
-      ...noteToToggle,
-      isPinned: !noteToToggle.isPinned
-    };
-  
-    try {
-      await togglePin(
-        noteId,
-        updatedNote.isPinned
-      );
-  
-      const updatedNotesList = notes.map((note) =>
-        note.id === noteId ? updatedNote : note
-      );
-  
-      setNotes(updatedNotesList);
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
-
   const handleNoteClick = (note: Note) => {
     setSelectedNote(note);
     setTitle(note.title);
@@ -191,79 +94,13 @@ const App = () => {
     setIsFormVisible(false);
   };
 
-
-  const startRecording = async () => {
-    setIsRecording(true);
-    setTranscription("Recording...");
-  
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const recorder = new MediaRecorder(stream);
-
-  recorder.ondataavailable = async (event) => {
-    const audioBlob = event.data;
-    const transcriptionResult = await transcribeAudio(audioBlob);
-
-    if (transcriptionResult) {
-      setContent((prevContent) => prevContent + " " + transcriptionResult);
-    }
-
-    setTranscription(transcriptionResult ? null : "Error during transcription");
-  };
-
-  recorder.start();
-  setMediaRecorder(recorder);
-};
-
-
-  const stopRecording = () => {
-    setTranscription("Processing...");
-    setIsRecording(false);
-    mediaRecorder?.stop();
-    setMediaRecorder(null);
-  };
-
-
-  const addTag = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter" || event.key === ",") {
-      event.preventDefault();
-      
-      const trimmedTag = tagInput.trim();
-      
-      // Check for tag length and tag limit
-      if (trimmedTag.length > 0 && trimmedTag.length <= 50 && tags.length < 3) {
-        setTags([...tags, trimmedTag]);
-        setTagInput("");
-      } else if (tags.length >= 3) {
-        alert("Maximum of 3 tags allowed.");
-      } else if (trimmedTag.length > 50) {
-        alert("Tag length cannot exceed 50 characters.");
-      }
+  const handleMicClick = () => {
+    if (isRecording) {
+      stopRecording(setIsRecording, setTranscription, mediaRecorder, setMediaRecorder);
+    } else {
+      startRecording(setIsRecording, setTranscription, setMediaRecorder, setContent);
     }
   };
-
-  const removeTag = (indexToRemove: number) => {
-    setTags(tags.filter((_, index) => index !== indexToRemove));
-  };
-
-  const burgerMouseEnter = () => {
-    setIsHovered(true);
-  }
-
-  const burgerMouseLeave = () => {
-      setIsHovered(false);
-  }
-
-  
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const handleCategoryClick = (category: string) => {
-    setSelectedCategory(category);
-    setIsSidebarOpen(false);
-  };
-
   
 
   return( <>
@@ -274,10 +111,10 @@ const App = () => {
         type='button'
         onClick={(e) => {
           e.stopPropagation(); // Prevent event from reaching document listener to prevent sidebar open/close glitch
-          toggleSidebar();
+          toggleSidebar(isSidebarOpen, setIsSidebarOpen);
         }}
-        onMouseEnter={burgerMouseEnter}
-        onMouseLeave={burgerMouseLeave}>
+        onMouseEnter={() => burgerMouseEnter(setIsHovered)}
+        onMouseLeave={() => burgerMouseLeave(setIsHovered)}>
         <FontAwesomeIcon 
             icon={faBars} 
             className={`icon bars-icon ${isHovered || isSidebarOpen ? 'fade-out' : 'fade-in'}`}
@@ -302,27 +139,27 @@ const App = () => {
       <ul className="category-list">
         <li 
           className={selectedCategory === "" ? "active" : ""}
-          onClick={() => handleCategoryClick("")}>
+          onClick={() => handleCategoryClick("", setSelectedCategory, setIsSidebarOpen)}>
           All Notes
         </li>
         <li 
           className={selectedCategory === "GENERAL" ? "active" : ""}
-          onClick={() => handleCategoryClick("GENERAL")}>
+          onClick={() => handleCategoryClick("GENERAL", setSelectedCategory, setIsSidebarOpen)}>
           GENERAL
         </li>
         <li 
           className={selectedCategory === "WORK" ? "active" : ""}
-          onClick={() => handleCategoryClick("WORK")}>
+          onClick={() => handleCategoryClick("WORK", setSelectedCategory, setIsSidebarOpen)}>
           WORK
         </li>
         <li 
           className={selectedCategory === "PERSONAL" ? "active" : ""}
-          onClick={() => handleCategoryClick("PERSONAL")}>
+          onClick={() => handleCategoryClick("PERSONAL", setSelectedCategory, setIsSidebarOpen)}>
           PERSONAL
         </li>
         <li 
           className={selectedCategory === "OTHER" ? "active" : ""}
-          onClick={() => handleCategoryClick("OTHER")}>
+          onClick={() => handleCategoryClick("OTHER", setSelectedCategory, setIsSidebarOpen)}>
           OTHER
         </li>
       </ul>
@@ -347,7 +184,22 @@ const App = () => {
         {isFormVisible && (
           <form className="note-form visible" 
             onSubmit={(event) => 
-              selectedNote ? handleUpdateNote(event) : handleAddNote(event)}>
+              selectedNote
+              ? handleUpdateNote(
+                event,
+                { title, content, category, tags }, // FormState
+                { setTitle, setContent, setCategory, setTags }, // FormSetters
+                { notes, setNotes }, // NoteState
+                { setIsFormVisible }, // FormVisibility
+                { selectedNote, setSelectedNote } // SelectedNote
+              )
+            : handleAddNote(
+                event,
+                { title, content, category, tags }, // FormState
+                { setTitle, setContent, setCategory, setTags }, // FormSetters
+                { notes, setNotes }, // NoteState
+                { setIsFormVisible } // FormVisibility
+              )}>
                   
             <input 
               value={title}
@@ -369,7 +221,7 @@ const App = () => {
                 required>
               </textarea>
               <button className='mic-button' type='button' 
-                onClick={isRecording ? stopRecording : startRecording}
+                onClick={handleMicClick}
                 title={isRecording ? 'Stop recording' : 'Start voice input'}>
                 <FontAwesomeIcon icon={faMicrophone}/>
               </button>
@@ -391,7 +243,7 @@ const App = () => {
                   <button 
                     type="button" 
                     className="remove-tag-btn"
-                    onClick={() => removeTag(index)}
+                    onClick={() => removeTag(index, tags, setTags)}
                   >
                     &times;
                   </button>
@@ -403,7 +255,7 @@ const App = () => {
               placeholder={tags.length < 3 ? "Add a tag..." : "Max 3 tags"}
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={addTag}
+              onKeyDown={(event) => addTag(event, tagInput, tags, setTags, setTagInput)}
               disabled={tags.length >= 3}
               className='tags-input'/>
 
@@ -438,10 +290,10 @@ const App = () => {
                 <button className='pin'
                   onClick={(event) => {
                     event.stopPropagation(); // Prevents triggering onClick of the note itself
-                    handleTogglePin(note.id);
+                    handleTogglePin(note.id, { notes, setNotes });
                   }}>
                   <FontAwesomeIcon icon={note.isPinned ? faSolidStar : faRegularStar}/></button>
-                <button className='delete-note' onClick={(event) => handleDeleteNote(event, note.id)}>X</button>
+                <button className='delete-note' onClick={(event) => handleDeleteNote(event, note.id, { notes, setNotes })}>X</button>
               </div>
               
             </div>

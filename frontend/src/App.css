@@ -8,7 +8,7 @@ body{
   padding: 0;
   font-family: 'Arial', sans-serif;
   background-color: #c2deec;
-  color: #333;
+  color: #000;
 }
 
 .app-container{
@@ -173,7 +173,7 @@ body{
 
 .tag {
   background-color: #88CCEE;
-  color: #333;
+  color: #000;
   border-radius: 20px;
   padding: 5px 10px;
   display: inline-flex;
@@ -184,7 +184,7 @@ body{
   background-color: #88CCEE !important;
   background: none;
   border: none;
-  color: white;
+  color: #000;
   cursor: pointer;
 }
 
@@ -204,7 +204,7 @@ body{
   justify-content: flex-start;
   flex-wrap: wrap;
   background-color: #88CCEE;
-  color: #333;
+  color: #000;
   padding: 5px 10px;
   border-radius: 20px;
   margin: 5px 5px 10px 0;
