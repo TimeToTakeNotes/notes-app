@@ -25,7 +25,7 @@ model Note {
   title     String
   content   String    @db.Text
   tags      NoteTag[]
-  category  Category?
+  category  Category  @default(GENERAL)
   isPinned  Boolean   @default(false)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt

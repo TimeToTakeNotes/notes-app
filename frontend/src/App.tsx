@@ -1,6 +1,17 @@
 import React, {useEffect, useState, useRef} from 'react';
 
 import useFetchNotes from './hooks/useFetchNotes';
+import useOutsideClick from './hooks/useOutsideClick';
+import useHeaderHeight from './hooks/useHeaderHeight';
+
+import { Note } from "./types/noteTypes";
+
+import { addNote, updateNote, deleteNote, togglePin } from "./services/api/notesAPI";
+import { transcribeAudio } from './services/api/speechToTextAPI';
+
+import { filterAndSortNotes } from './utils/filterNotes';
+
+import { highlightText } from "./utils/highlight";
 
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -15,40 +26,7 @@ import "./App.css";
 library.add(faMicrophone, faNotesMedical, faBars, faArrowRight, faArrowLeft, faSolidStar, faRegularStar);
 
 
-// Type for response structure from backend
-type NoteResponse = {
-  id: number;
-  title: string;
-  content: string;
-  category: string;
-  isPinned: boolean;
-  tags: { noteId: number; tagId: number; name: string }[];
-  
-};
-
-// Type for use by notes in frontend
-type Tag = {
-  noteId: number;
-  tagId: number;
-  name: string;
-};
-
-// Type for use by notes in frontend
-type Note = {
-  id: number;
-  title: string;
-  content: string;
-  category: string;
-  isPinned: boolean;
-  tags: { noteId: number; tagId: number; name: string }[];
-  
-};
-
-
 const App = () => {
-  const { notes, setNotes } = useFetchNotes();
-
-
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
@@ -74,97 +52,45 @@ const App = () => {
   const [ isSidebarOpen, setIsSidebarOpen ] = useState(false);
 
 
+  // Use hooks
+  const { notes, setNotes } = useFetchNotes();
+
   const burgerRef = useRef<HTMLButtonElement | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
+  useOutsideClick([sidebarRef, burgerRef], () => setIsSidebarOpen(false));
 
   const headerRef = useRef<HTMLDivElement>(null);
-  const [headerHeight, setHeaderHeight] = useState(0);
+  useHeaderHeight(headerRef);
+
+  // Use utils
+  const filteredNotes = filterAndSortNotes(notes, selectedCategory, searchQuery);
 
 
+  // Update document title
   useEffect(() => {
     document.title = "Notes App";
   }, []);
-
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        sidebarRef.current &&
-        burgerRef.current &&
-        !sidebarRef.current.contains(event.target as Node) &&
-        !burgerRef.current.contains(event.target as Node)
-      ) {
-        setIsSidebarOpen(false);
-      }
-    };
-  
-    document.addEventListener('mousedown', handleClickOutside);
-  
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-
-  useEffect(() => {
-    if (headerRef.current) {
-      const headerHeight = headerRef.current.offsetHeight;
-      document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
-    }
-  }, []);
-
-
-  const handleNoteClick = (note: Note) => {
-    setSelectedNote(note);
-    setTitle(note.title);
-    setContent(note.content);
-    setTags(note.tags.map((tag) => tag.name)) // Load tags correctly
-    setIsFormVisible(true);
-  };
 
 
   const handleAddNote = async (event: React.FormEvent) => {
     event.preventDefault();
 
     try {
-      const response = await fetch("http://localhost:5000/api/notes", 
-        {
-          method:"POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            title,
-            content,
-            category,
-            isPinned: false,
-            tags,  
-          })
-        }
+      const newNote = await addNote(
+        title,
+        content,
+        category,
+        tags
       );
 
-      const newNote = await response.json();
-
-      // Normalize the tags structure to match the GET response
-      const formattedNote: Note = {
-        id: newNote.id,
-        title: newNote.title,
-        content: newNote.content,
-        category: newNote.category,
-        isPinned: newNote.isPinned,
-        tags: newNote.tags.map((noteTag: any) => ({
-          noteId: noteTag.noteId,
-          tagId: noteTag.tagId,
-          name: noteTag.tag.name
-        }))
-      };
-
-      setNotes([formattedNote, ...notes]);
-      setTitle("");
-      setContent("");
-      setCategory("");
-      setTags([]);
-      setIsFormVisible(false);
+      if (newNote) {
+        setNotes([newNote, ...notes]);
+        setTitle("");
+        setContent("");
+        setCategory("");
+        setTags([]);
+        setIsFormVisible(false);
+      }
     } catch (e) {
       console.log(e);
     }
@@ -179,38 +105,17 @@ const App = () => {
     }
   
     try {
-      const response = await fetch(`http://localhost:5000/api/notes/${selectedNote.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          content,
-          category,
-          tags,
-          isPinned: selectedNote.isPinned
-        }),
-      });
-  
-      const updatedNote = await response.json();
-
-      // Normalize the tags structure to match the GET response
-      const formattedNote: Note = {
-        id: updatedNote.id,
-        title: updatedNote.title,
-        content: updatedNote.content,
-        category: updatedNote.category,
-        isPinned: updatedNote.isPinned,
-        tags: updatedNote.tags.map((noteTag: any) => ({
-          noteId: noteTag.noteId,
-          tagId: noteTag.tagId,
-          name: noteTag.tag.name // Extract the name from the nested tag object in the JSON response
-        }))
-      };
+      const updatedNote = await updateNote(
+        selectedNote.id,
+        title,
+        content,
+        category,
+        tags,
+        selectedNote.isPinned
+      );
 
       const updatedNotesList = notes.map((note) =>
-        note.id === selectedNote.id ? formattedNote : note
+        note.id === selectedNote.id ? updatedNote : note
       );
 
       setNotes(updatedNotesList);
@@ -225,24 +130,12 @@ const App = () => {
     }
   };
 
-  const handleCancel = () => {
-    setTitle("")
-    setContent("")
-    setCategory("");
-    setTags([]);
-    setSelectedNote(null);
-    setIsFormVisible(false);
-  };
 
-  const deleteNote = async (event: React.MouseEvent, noteId: number) => {
+  const handleDeleteNote = async (event: React.MouseEvent, noteId: number) => {
     event.stopPropagation();
 
     try {
-      await fetch(`http://localhost:5000/api/notes/${noteId}`, 
-        {
-          method: "DELETE",
-        }
-      );
+      await deleteNote(noteId);
 
       const updatedNotes = notes.filter((note) => note.id !== noteId);
 
@@ -253,42 +146,74 @@ const App = () => {
   };
 
 
+  const handleTogglePin = async (noteId: number) => {
+    const noteToToggle = notes.find((note) => note.id === noteId);
+  
+    if (!noteToToggle) return;
+  
+    const updatedNote = {
+      ...noteToToggle,
+      isPinned: !noteToToggle.isPinned
+    };
+  
+    try {
+      await togglePin(
+        noteId,
+        updatedNote.isPinned
+      );
+  
+      const updatedNotesList = notes.map((note) =>
+        note.id === noteId ? updatedNote : note
+      );
+  
+      setNotes(updatedNotesList);
+    } catch (e) {
+      console.log(e);
+    }
+  };
+
+
+  const handleNoteClick = (note: Note) => {
+    setSelectedNote(note);
+    setTitle(note.title);
+    setContent(note.content);
+    setCategory(note.category);
+    setTags(note.tags.map((tag) => tag.name)) // Load tags correctly
+    setIsFormVisible(true);
+  };
+
+  const handleCancel = () => {
+    setTitle("")
+    setContent("")
+    setCategory("");
+    setTags([]);
+    setSelectedNote(null);
+    setIsFormVisible(false);
+  };
+
+
   const startRecording = async () => {
     setIsRecording(true);
     setTranscription("Recording...");
   
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const recorder = new MediaRecorder(stream);
-  
-    recorder.ondataavailable = async (event) => {
-      const audioBlob = event.data;
-  
-      const formData = new FormData();
-      formData.append("audio", audioBlob);
-  
-      try {
-        // Send each audio chunk to the backend for transcription
-        const response = await fetch("http://localhost:5000/api/speech-to-text", {
-          method: "POST",
-          body: formData,
-        });
-  
-        const data = await response.json();
-        const transcriptionResult = data.transcription || "";
-  
-        // Append transcription result to the content in real-time
-        setContent((prevContent) => prevContent + " " + transcriptionResult);
+  const recorder = new MediaRecorder(stream);
 
-        setTranscription(null);
-      } catch (e) {
-        console.log("Error transcribing audio", e);
-        setTranscription("Error during transcription");
-      }
-    };
-  
-    recorder.start();
-    setMediaRecorder(recorder);
+  recorder.ondataavailable = async (event) => {
+    const audioBlob = event.data;
+    const transcriptionResult = await transcribeAudio(audioBlob);
+
+    if (transcriptionResult) {
+      setContent((prevContent) => prevContent + " " + transcriptionResult);
+    }
+
+    setTranscription(transcriptionResult ? null : "Error during transcription");
   };
+
+  recorder.start();
+  setMediaRecorder(recorder);
+};
+
 
   const stopRecording = () => {
     setTranscription("Processing...");
@@ -297,28 +222,6 @@ const App = () => {
     setMediaRecorder(null);
   };
 
-  const filteredNotes = notes
-  .filter(
-    (note) =>
-      (selectedCategory === "" || note.category === selectedCategory) && 
-      (note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      note.content.toLowerCase().includes(searchQuery.toLowerCase()))
-  )
-  .sort((a, b) => (a.isPinned === b.isPinned) ? 0 : a.isPinned ? -1 : 1);
-
-
-  const highlightText = (text: string, query: string) => {
-    if (!query) return text;
-    const regex = new RegExp(`(${query})`, "gi");
-    const parts = text.split(regex);
-    return parts.map((part, index) => 
-      part.toLowerCase() === query.toLowerCase() ? (
-        <span key={index} className="highlight">{part}</span>
-      ) : (
-        part
-      )
-    );
-  };
 
   const addTag = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter" || event.key === ",") {
@@ -347,39 +250,10 @@ const App = () => {
   }
 
   const burgerMouseLeave = () => {
-    setIsHovered(false);
+      setIsHovered(false);
   }
 
-  const togglePin = async (noteId: number) => {
-    const noteToToggle = notes.find((note) => note.id === noteId);
   
-    if (!noteToToggle) return;
-  
-    const updatedNote = {
-      ...noteToToggle,
-      isPinned: !noteToToggle.isPinned
-    };
-  
-    try {
-      await fetch(`http://localhost:5000/api/notes/${noteId}/pin`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ isPinned: updatedNote.isPinned }),
-      });
-
-     
-  
-      const updatedNotesList = notes.map((note) =>
-        note.id === noteId ? updatedNote : note
-      );
-  
-      setNotes(updatedNotesList);
-    } catch (e) {
-      console.log(e);
-    }
-  };
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -405,10 +279,15 @@ const App = () => {
         onMouseEnter={burgerMouseEnter}
         onMouseLeave={burgerMouseLeave}>
         <FontAwesomeIcon 
-          icon={isHovered || isSidebarOpen ? faArrowRight : faBars} 
-          className={`arrow-icon ${isSidebarOpen ? 'rotate' : ''}`}
-        />
-      </button>
+            icon={faBars} 
+            className={`icon bars-icon ${isHovered || isSidebarOpen ? 'fade-out' : 'fade-in'}`}
+          />
+          <FontAwesomeIcon 
+            icon={faArrowRight} 
+            className={`icon arrow-icon ${isHovered || isSidebarOpen ? 'fade-in' : 'fade-out'} 
+              ${isSidebarOpen ? 'rotate' : ''}`}
+          />
+        </button>
       <div className='search-bar'>
         <input 
           type="text"
@@ -497,7 +376,7 @@ const App = () => {
               {transcription && <p className='transcription-feedback'>{transcription}</p>}
             </div>
 
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className="category-dropdown">
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="category-dropdown" required>
                 <option value="">Select Category</option>
                 <option value="GENERAL">GENERAL</option>
                 <option value="WORK">WORK</option>
@@ -559,10 +438,10 @@ const App = () => {
                 <button className='pin'
                   onClick={(event) => {
                     event.stopPropagation(); // Prevents triggering onClick of the note itself
-                    togglePin(note.id);
+                    handleTogglePin(note.id);
                   }}>
                   <FontAwesomeIcon icon={note.isPinned ? faSolidStar : faRegularStar}/></button>
-                <button className='delete-note' onClick={(event) => deleteNote(event, note.id)}>X</button>
+                <button className='delete-note' onClick={(event) => handleDeleteNote(event, note.id)}>X</button>
               </div>
               
             </div>
@@ -572,6 +451,9 @@ const App = () => {
             <p className='note-content'>
               {highlightText(note.content, searchQuery)}
             </p>
+            <div className="note-footer">
+              <span>Last Updated: {new Date(note.updatedAt).toLocaleString()}</span>
+            </div>
           </div>
         ))}
       </div>

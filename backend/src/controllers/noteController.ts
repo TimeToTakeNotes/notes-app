@@ -8,7 +8,7 @@ import { getUniqueTags, cleanupUnusedTags, handleServerError, validateId } from 
 interface NoteRequest {
     title: string;
     content: string;
-    category?: "GENERAL" | "WORK" | "PERSONAL" | "OTHER";
+    category: "GENERAL" | "WORK" | "PERSONAL" | "OTHER";
     isPinned: boolean;
     tags: string[];
 }
@@ -32,12 +32,12 @@ interface FormattedNote {
 // Helper to format note
 const formatNote = (note: any): FormattedNote => ({
     ...note,
-    category: note.category || "GENERAL",
-    tags: note.tags.map((noteTag: any) => ({
+    category: note.category,
+    tags: note.tags ? note.tags.map((noteTag: any) => ({
         noteId: noteTag.noteId,
         tagId: noteTag.tagId,
         name: noteTag.tag.name
-    }))
+    })) : [] // Fallback to an empty array if `tags` is undefined
 });
 
 
@@ -79,7 +79,7 @@ export const getNotes = async (req: Request, res: Response) => {
 
 
 export const createNote = async (req: Request, res: Response) => {
-    const { title, content, tags, isPinned, category } = req.body as NoteRequest;
+    const { title, content, category = "GENERAL", isPinned, tags } = req.body as NoteRequest;
 
     if (!title || !content) {
         res.status(400).json({ error: "Title and content are required" });
@@ -99,7 +99,7 @@ export const createNote = async (req: Request, res: Response) => {
             data: {
                 title,
                 content,
-                category: category || "GENERAL",
+                category: category,
                 isPinned: isPinned || false,
                 tags: {
                     create: uniqueTags.map((tagName) => ({
@@ -130,7 +130,7 @@ export const createNote = async (req: Request, res: Response) => {
 
 export const updateNote = async (req: Request, res: Response) => {
     const id = parseInt(req.params.id);
-    const { title, content, tags, isPinned, category } = req.body as NoteRequest;
+    const { title, content, category = "GENERAL", isPinned, tags } = req.body as NoteRequest;
 
     if (!validateId(id, res)) return;
 
@@ -159,7 +159,7 @@ export const updateNote = async (req: Request, res: Response) => {
             data: {
                 title,
                 content,
-                category: category || "GENERAL",
+                category: category,
                 isPinned: isPinned !== undefined ? isPinned : false,
                 tags: {
                     create: uniqueTags.map((tagName) => ({

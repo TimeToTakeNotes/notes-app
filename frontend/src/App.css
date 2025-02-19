@@ -33,19 +33,45 @@ body{
 }
 
 .burger-menu {
+  display: inline-block;
+  position: relative;
   background-color: transparent;
   color: #0F4C81;
   font-size: 32px;
   cursor: pointer;
   border: none;
+  width: 40px; 
+  height: 40px;
 }
 
-.arrow-icon {
-  transition: transform 0.3s ease;
+.burger-menu .bars-icon,
+.burger-menu .arrow-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* Center them perfectly */
+  transition: opacity 0.35s ease-in-out, transform 0.35s ease-in-out;
+}
+
+.bars-icon.fade-in {
+  opacity: 1;
+}
+
+.bars-icon.fade-out {
+  opacity: 0;
+}
+
+.arrow-icon.fade-in {
+  opacity: 1;
+  transform: translate(-50%, -50%) rotate(0deg); /* Default position */
+}
+
+.arrow-icon.fade-out {
+  opacity: 0;
 }
 
 .arrow-icon.rotate {
-  transform: rotate(180deg);
+  transform: translate(-50%, -50%) rotate(180deg);
 }
 
 .sidebar {
@@ -91,6 +117,7 @@ body{
   display: flex;
   justify-content: flex-start;
   align-items: flex-start;
+  margin-bottom: 25px;
 }
 
 .add-note-button {
@@ -101,7 +128,7 @@ body{
   border: none;
   border-radius: 100%;
   cursor: pointer;
-  transition: opacity 0.3s ease;
+  transition: transform 0.3s ease,  opacity 0.3s ease;
   margin-bottom: 15px;
   margin-left: 15px;
 }
@@ -113,6 +140,7 @@ body{
 
 .add-note-button:hover {
   background-color: #88CCEE;
+  transform: scale(1.1);
 }
 
 .search-bar input {
@@ -218,6 +246,7 @@ body{
 }
 
 .note-header-buttons {
+  font-size: 16px;
   display: flex;
   gap: 15px;
 }
@@ -228,14 +257,22 @@ body{
   border: none;
   cursor: pointer;
   max-width: fit-content;
+  transition: transform 0.3s ease;
 }
 
 .delete-note:hover {
   color: #ff6f61;
+  transform: scale(1.2);
+}
+
+.pin {
+  color: #000;
+  transition: transform 0.3s ease;
 }
 
 .pin:hover {
   color: #0F4C81;
+  transform: scale(1.1);
 }
 
 h2{
@@ -352,6 +389,13 @@ input{
 .edit-buttons button:last-of-type:hover{
   background-color: rgb(148, 34, 34);
   color: white;
+}
+
+.note-footer {
+  font-size: 11px;
+  color: #666;
+  margin-top: 10px;
+  text-align: left;
 }
 
 

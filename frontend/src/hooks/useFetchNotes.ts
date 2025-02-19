@@ -1,28 +1,36 @@
+//Custom hook to fetch notes from the API and manage state.
+// Retrieves notes from the backend, formats them, and stores them in state.
+// Runs once on component mount.
+
 import { useEffect, useState } from 'react';
-import { Note, NoteResponse } from '../types/notes';
+import { Note } from '../types/noteTypes';
+import { fetchNotes } from '../services/api/notesAPI';
+
 
 const useFetchNotes = () => {
   const [notes, setNotes] = useState<Note[]>([]);
 
   useEffect(() => {
-    const fetchNotes = async () => {
-      try {
-        const response = await fetch("http://localhost:5000/api/notes");
-        const notesData: NoteResponse[] = await response.json();
-        const formattedNotes: Note[] = notesData.map(note => ({
-          ...note,
-          tags: note.tags.map(tag => ({
-            noteId: tag.noteId,
-            tagId: tag.tagId,
-            name: tag.name
-          }))
-        }));
-        setNotes(formattedNotes);
-      } catch (e) {
-        console.log(e);
-      }
+    const getNotes = async () => {
+      const notesData: Note[] = await fetchNotes(); // Use API function
+
+      // Ensure proper tag structure
+      const formattedNotes: Note[] = notesData.map((note) => ({
+        ...note,
+        updatedAt: note.updatedAt,
+        tags: note.tags
+          ? note.tags.map((tag) => ({
+              noteId: tag.noteId,
+              tagId: tag.tagId,
+              name: tag.name,
+            }))
+          : [], // Fallback to an empty array
+      }));
+
+      setNotes(formattedNotes);
     };
-    fetchNotes();
+
+    getNotes();
   }, []);
 
   return { notes, setNotes };
