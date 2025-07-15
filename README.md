@@ -155,12 +155,15 @@ notes-app/
 
 ## API Endpoints
 
-- `GET /api/notes` — Fetch all notes
-- `POST /api/notes` — Create a new note
-- `PUT /api/notes/:id` — Update a note
-- `DELETE /api/notes/:id` — Delete a note
-- `PATCH /api/notes/:id/pin` — Pin/unpin a note
-- `POST /api/speech-to-text` — Upload audio for transcription
+| Method | Endpoint                | Description                         |
+|--------|-------------------------|-------------------------------------|
+| GET    | `/api/notes`            | Fetch all notes                     |
+| POST   | `/api/notes`            | Create a new note                   |
+| PUT    | `/api/notes/:id`        | Update a note                       |
+| DELETE | `/api/notes/:id`        | Delete a note                       |
+| PATCH  | `/api/notes/:id/pin`    | Pin or unpin a note                 |
+| POST   | `/api/speech-to-text`   | Upload audio for transcription      |
+
 
 Refer to the backend source for detailed request/response shapes.
 
